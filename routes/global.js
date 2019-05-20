@@ -9,6 +9,8 @@ const global = require("../controllers/global")
 
 router.get("/login",global.login)
 
+router.get("/getRecommendHouseInfo",global.getRecommendHouseInfo)
+
 
 module.exports = router
 

@@ -156,10 +156,150 @@ async function houseInfoList ( req ,res ) {
     })
 }
 
+async function getHouseDetaileInfo ( req,res ) {
+    var openid = req.query.openid
+    var houseid = req.query.houseid
+    var myOpenid = req.query.myOpenid
 
+    var selectSql = `select * from userhouse where openid='${openid}' and houseid='${houseid}'`
+    mysqlConnection.query(selectSql)
+    .then( data =>{
+        var myData = data.results[0]
+        var Obj = {
+            openid : myData.openid,
+            houseid : myData.houseid,
+            houseFrontCoverImgPath: myData.houseFrontCoverImgPath,
+            houseOtherImgListInfo: JSON.parse(myData.houseOtherImgListInfo),
+            mode: JSON.parse(myData.mode),
+            placeInfo: JSON.parse(myData.placeInfo),
+            room : JSON.parse(myData.room),
+            toilet: JSON.parse(myData.toilet),
+            acreage: JSON.parse(myData.acreage),
+            storey: JSON.parse(myData.storey),
+            payTime: JSON.parse(myData.payTime),
+            price: JSON.parse(myData.price),
+            feature: JSON.parse(myData.feature),
+            houseDescribeValue: JSON.parse(myData.houseDescribeValue),
+            contactWay: JSON.parse(myData.contactWay)
+        }
+        var collectSql = `select collectHouse from user where openid = '${myOpenid}'`
+        mysqlConnection.query( collectSql )
+        .then( sonData =>{
+            var mySonData = sonData.results[0].collectHouse
+            if ( mySonData == ''){
+                Obj.shoucangFlag = false
+                res.json(Obj)
+            }else{
+                var mySonDataArr = mySonData.split('@@')
+                var index = mySonDataArr.findIndex( mySonDataArrItem =>{
+                    return ( mySonDataArrItem == houseid )
+                })
+                if ( index  == -1 ){
+                    Obj.shoucangFlag = false
+                    res.json(Obj)
+                }else{
+                    Obj.shoucangFlag = true
+                    res.json(Obj)
+                }
+            }
+        })
+
+    })
+}
+
+async function collectHouse ( req,res ) {
+    var myOpenid = req.query.myOpenid
+    var collectHouseid = req.query.collectHouseid
+    var collectFlag = JSON.parse(req.query.collectFlag)
+
+    if ( collectFlag ){
+        var sql = `select * from user where openid = '${myOpenid}'`
+        mysqlConnection.query(sql)
+        .then( data =>{
+            var results = data.results[0].collectHouse
+            if ( results == '' ){
+                var updateSql = `update user set collectHouse = '${collectHouseid}' where openid = '${myOpenid}' `
+                mysqlConnection.query( updateSql )
+                res.json('收藏成功')
+            }else{
+                results += '@@' + collectHouseid
+                var updateSql = `update user set collectHouse = '${results}' where openid = '${myOpenid}' `
+                mysqlConnection.query( updateSql )
+                res.json('收藏成功')
+            }
+        })
+    }
+    else{
+        var sql = `select * from user where openid = '${myOpenid}'`
+        mysqlConnection.query(sql)
+        .then( data =>{
+             var results = data.results[0].collectHouse
+             var resultsArr = results.split('@@')
+             var index = resultsArr.findIndex( item =>{
+                 return ( item == collectHouseid )
+             })
+            resultsArr.splice(index,1)
+            if ( resultsArr.length == 0 ){
+                var updateSql = `update user  set  collectHouse = '' where openid = '${myOpenid}'`
+                mysqlConnection.query(updateSql)
+                res.json('取消收藏')
+            }else{
+                resultsArr = resultsArr.join('@@')
+                var updateSql = `update user  set  collectHouse = '${resultsArr}' where openid = '${myOpenid}'`
+                mysqlConnection.query(updateSql)
+                res.json('取消收藏')
+            }
+        })
+    }
+}
+
+async function getCollectHouseList ( req,res ) {
+    var openid = req.query.openid
+    var collectHouseSql = `select * from user where openid = '${openid}'`
+    mysqlConnection.query( collectHouseSql )
+    .then( data =>{
+        var results = data.results[0].collectHouse
+        if ( results == '' ){
+            var arr = []
+            res.json(arr)
+        }
+        else{
+            var resultsArr = results.split('@@')
+            var arr = []
+            var end = resultsArr.length-1
+            var start = 0
+            console.log ( resultsArr )
+            var syncFunc = function ( ) {
+                var sql = `select * from userhouse where houseid = ${resultsArr[start]}`
+                mysqlConnection.query( sql )
+                .then( sonData =>{
+                    var houseInfo = sonData.results[0]
+                    var Obj = {
+                        openid : houseInfo.openid,
+                        houseid : houseInfo.houseid,
+                        houseFrontCoverImgPath : houseInfo.houseFrontCoverImgPath,
+                        placeInfo : JSON.parse(houseInfo.placeInfo)
+                    }
+                    arr.push(Obj)
+                    start++
+                    if ( start <= end ){
+                        syncFunc()
+                    }else{
+                        res.json(arr)
+                    }
+                })
+            }
+            syncFunc()
+        }
+
+    })
+}
 
 module.exports = {
     advertisement,
     addRentHouseInfo,
-    houseInfoList
+    houseInfoList,
+    getHouseDetaileInfo,
+    collectHouse,
+    getCollectHouseList
 }

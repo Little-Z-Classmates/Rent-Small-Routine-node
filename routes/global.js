@@ -11,6 +11,7 @@ router.get("/login",global.login)
 
 router.get("/getRecommendHouseInfo",global.getRecommendHouseInfo)
 
+router.get("/setFeedback",global.setFeedback)
 
 module.exports = router
 

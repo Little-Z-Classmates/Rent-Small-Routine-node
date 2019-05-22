@@ -178,7 +178,18 @@ async function getRecommendHouseInfo ( req,res ) {
     })
 }
 
+async function setFeedback ( req,res ) {
+    var openid  = req.query.openid
+    var info  = req.query.info
+    var sql = ` insert into feedback(openid,info) value ('${openid}','${info}')`
+    mysqlConnection.query(sql)
+    .then( data =>{
+        res.json('反馈成功')
+    })
+}
+
 module.exports = {
     login,
-    getRecommendHouseInfo
+    getRecommendHouseInfo,
+    setFeedback
 }
